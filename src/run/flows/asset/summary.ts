@@ -241,6 +241,7 @@ export type AssetSummaryContext = {
   summaryEngine: ReturnType<typeof createSummaryEngine>;
   trackedFetch: typeof fetch;
   writeViaFooter: (parts: string[]) => void;
+  onSourceReady?: ((source: { url: string; title: string | null; content: string }) => void) | null;
   clearProgressForStdout: () => void;
   restoreProgressAfterStdout?: (() => void) | null;
   getLiteLlmCatalog: () => Promise<
@@ -331,6 +332,7 @@ export type AssetSummaryContextInput = {
   hooks: Pick<
     AssetSummaryContext,
     | "writeViaFooter"
+    | "onSourceReady"
     | "clearProgressForStdout"
     | "restoreProgressAfterStdout"
     | "buildReport"
@@ -364,23 +366,31 @@ export async function summarizeAsset(ctx: AssetSummaryContext, args: SummarizeAs
     ? await readLastSuccessfulCliProvider(ctx.envForRun)
     : null;
 
-  const { promptText, attachments, assetFooterParts, textContent } = await prepareAssetPrompt({
-    ctx: {
-      env: ctx.env,
-      envForRun: ctx.envForRun,
-      execFileImpl: ctx.execFileImpl,
-      timeoutMs: ctx.timeoutMs,
-      preprocessMode: ctx.preprocessMode,
-      format: ctx.format,
-      lengthArg: ctx.lengthArg,
-      outputLanguage: ctx.outputLanguage,
-      fixedModelSpec: ctx.fixedModelSpec,
-      promptOverride: ctx.promptOverride ?? null,
-      lengthInstruction: ctx.lengthInstruction ?? null,
-      languageInstruction: ctx.languageInstruction ?? null,
-    },
-    attachment: args.attachment,
-  });
+  const { promptText, attachments, assetFooterParts, textContent, sourceContent } =
+    await prepareAssetPrompt({
+      ctx: {
+        env: ctx.env,
+        envForRun: ctx.envForRun,
+        execFileImpl: ctx.execFileImpl,
+        timeoutMs: ctx.timeoutMs,
+        preprocessMode: ctx.preprocessMode,
+        format: ctx.format,
+        lengthArg: ctx.lengthArg,
+        outputLanguage: ctx.outputLanguage,
+        fixedModelSpec: ctx.fixedModelSpec,
+        promptOverride: ctx.promptOverride ?? null,
+        lengthInstruction: ctx.lengthInstruction ?? null,
+        languageInstruction: ctx.languageInstruction ?? null,
+      },
+      attachment: args.attachment,
+    });
+  if (sourceContent?.trim()) {
+    ctx.onSourceReady?.({
+      url: args.sourceLabel,
+      title: args.attachment.filename ?? null,
+      content: sourceContent,
+    });
+  }
   const prompt: Prompt = {
     system: SUMMARY_SYSTEM_PROMPT,
     userText: promptText,

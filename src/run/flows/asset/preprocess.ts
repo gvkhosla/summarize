@@ -41,6 +41,7 @@ export type AssetPreprocessResult = {
   attachments: Attachment[];
   assetFooterParts: string[];
   textContent: { content: string; bytes: number } | null;
+  sourceContent: string | null;
 };
 
 export type DocumentHandlingDecision =
@@ -254,7 +255,7 @@ export async function prepareAssetPrompt({
         filename: attachment.filename,
       },
     ];
-    return { promptText, attachments, assetFooterParts, textContent };
+    return { promptText, attachments, assetFooterParts, textContent, sourceContent: null };
   }
 
   // Non-text file attachments require preprocessing (pi-ai message format supports images, but not generic files).
@@ -320,5 +321,8 @@ export async function prepareAssetPrompt({
 
   void ctx.fixedModelSpec;
 
-  return { promptText, attachments, assetFooterParts, textContent };
+  const sourceContent = usingPreprocessedMarkdown
+    ? preprocessedMarkdown
+    : (textContent?.content ?? null);
+  return { promptText, attachments, assetFooterParts, textContent, sourceContent };
 }

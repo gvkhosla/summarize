@@ -15,6 +15,10 @@ export function createRunnerFlowContexts(options: {
   model: UrlFlowContext["model"];
   setTranscriptionCost: UrlFlowContext["hooks"]["setTranscriptionCost"];
   writeViaFooter: UrlFlowContext["hooks"]["writeViaFooter"];
+  eventHooks?: Partial<Pick<UrlFlowContext["hooks"], "onExtracted">>;
+  onAssetSourceReady?:
+    | ((source: { url: string; title: string | null; content: string }) => void)
+    | null;
   clearProgressForStdout: UrlFlowContext["hooks"]["clearProgressForStdout"];
   restoreProgressAfterStdout: UrlFlowContext["hooks"]["restoreProgressAfterStdout"];
   setClearProgressBeforeStdout: UrlFlowContext["hooks"]["setClearProgressBeforeStdout"];
@@ -31,6 +35,8 @@ export function createRunnerFlowContexts(options: {
     model,
     setTranscriptionCost,
     writeViaFooter,
+    eventHooks,
+    onAssetSourceReady,
     clearProgressForStdout,
     restoreProgressAfterStdout,
     setClearProgressBeforeStdout,
@@ -94,6 +100,7 @@ export function createRunnerFlowContexts(options: {
     },
     hooks: {
       writeViaFooter,
+      onSourceReady: onAssetSourceReady ?? null,
       clearProgressForStdout,
       restoreProgressAfterStdout,
       buildReport,
@@ -146,6 +153,7 @@ export function createRunnerFlowContexts(options: {
       model,
       cache: cacheState,
       mediaCache,
+      eventHooks,
       runtimeHooks: {
         setTranscriptionCost,
         summarizeAsset,

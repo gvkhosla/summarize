@@ -25,8 +25,12 @@ export function parseYoutubeMode(raw: string): YoutubeMode {
   const normalized = raw.trim().toLowerCase();
   if (normalized === "autp") return "auto";
   if (normalized === "auto" || normalized === "web" || normalized === "apify") return normalized;
-  if (normalized === "yt-dlp") return "yt-dlp";
-  if (normalized === "no-auto") return "no-auto";
+  if (normalized === "yt-dlp" || normalized === "yt_dlp" || normalized === "ytdlp") {
+    return "yt-dlp";
+  }
+  if (normalized === "no-auto" || normalized === "no_auto" || normalized === "noauto") {
+    return "no-auto";
+  }
   throw new Error(`Unsupported --youtube: ${raw}`);
 }
 

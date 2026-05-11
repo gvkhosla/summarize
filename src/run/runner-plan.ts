@@ -8,6 +8,7 @@ import {
   resolveTrueColor,
 } from "../tty/theme.js";
 import { createCacheStateFromConfig } from "./cache-state.js";
+import { type ChatSource, runSourceChat } from "./chat.js";
 import { parseCliProviderArg } from "./env.js";
 import { isPdfExtension, isTranscribableExtension } from "./flows/asset/input.js";
 import { summarizeMediaFile as summarizeMediaFileImpl } from "./flows/asset/media.js";
@@ -57,6 +58,7 @@ export async function createRunnerPlan(options: {
   } = options;
   let { promptOverride } = options;
   const programOpts = program.opts() as Record<string, unknown>;
+  const chatEnabled = Boolean(programOpts.chat);
 
   const cliFlagPresent = normalizedArgv.some((arg) => arg === "--cli" || arg.startsWith("--cli="));
   let cliProviderArgRaw = typeof programOpts.cli === "string" ? programOpts.cli : null;
@@ -105,6 +107,10 @@ export async function createRunnerPlan(options: {
     envForRun,
     url: inputTarget.kind === "url" ? inputTarget.url : url,
   });
+
+  if (chatEnabled && json) {
+    throw new Error("--chat is not supported with --json");
+  }
 
   if (extractMode && lengthExplicitlySet && !json && isRichTty(stderr)) {
     stderr.write("Warning: --length is ignored with --extract (no summary is generated).\n");
@@ -365,6 +371,12 @@ export async function createRunnerPlan(options: {
     restoreProgressAfterStdout?.();
   };
 
+  let chatSource: ChatSource | null = null;
+  const rememberChatSource = (source: ChatSource) => {
+    if (!source.content.trim()) return;
+    chatSource = source;
+  };
+
   const { summarizeAsset, assetInputContext, urlFlowContext } = createRunnerFlowContexts({
     summarizeMediaFileImpl,
     cacheState,
@@ -462,6 +474,16 @@ export async function createRunnerPlan(options: {
     },
     setTranscriptionCost,
     writeViaFooter,
+    eventHooks: {
+      onExtracted: (extracted) => {
+        rememberChatSource({
+          url: extracted.url,
+          title: extracted.title ?? null,
+          content: extracted.content,
+        });
+      },
+    },
+    onAssetSourceReady: rememberChatSource,
     clearProgressForStdout,
     restoreProgressAfterStdout,
     setClearProgressBeforeStdout,
@@ -526,6 +548,25 @@ export async function createRunnerPlan(options: {
         summarizeAsset,
         runUrlFlowContext: urlFlowContext,
       });
+
+      if (chatEnabled) {
+        if (!chatSource) {
+          stderr.write(
+            "\nChat unavailable: no extracted text source was captured for this input.\n",
+          );
+          return;
+        }
+        await runSourceChat({
+          env: envForRun,
+          fetchImpl: trackedFetch,
+          configForCli,
+          stdin: stdin ?? process.stdin,
+          stdout,
+          stderr,
+          source: chatSource,
+          modelOverride: explicitModelArg === "auto" ? null : explicitModelArg,
+        });
+      }
     },
   };
 }

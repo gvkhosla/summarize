@@ -259,6 +259,12 @@ See: https://github.com/openai/whisper for setup details`);
       ctx.envForRun,
     );
 
+    ctx.onSourceReady?.({
+      url: args.sourceLabel,
+      title: extracted.title ?? null,
+      content: extracted.content,
+    });
+
     // If extract mode, output the transcript directly without LLM summarization
     if (ctx.extractMode) {
       ctx.clearProgressForStdout();

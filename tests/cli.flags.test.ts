@@ -9,7 +9,9 @@ import {
   parseMaxOutputTokensArg,
   parseMetricsMode,
   parsePreprocessMode,
+  parseRetriesArg,
   parseStreamMode,
+  parseVideoMode,
   parseYoutubeMode,
 } from "../src/flags.js";
 
@@ -19,6 +21,11 @@ describe("cli flag parsing", () => {
     expect(parseYoutubeMode("web")).toBe("web");
     expect(parseYoutubeMode("apify")).toBe("apify");
     expect(parseYoutubeMode("yt-dlp")).toBe("yt-dlp");
+    expect(parseYoutubeMode("yt_dlp")).toBe("yt-dlp");
+    expect(parseYoutubeMode("ytdlp")).toBe("yt-dlp");
+    expect(parseYoutubeMode("no-auto")).toBe("no-auto");
+    expect(parseYoutubeMode("no_auto")).toBe("no-auto");
+    expect(parseYoutubeMode("noauto")).toBe("no-auto");
     expect(parseYoutubeMode("autp")).toBe("auto");
     expect(() => parseYoutubeMode("nope")).toThrow(/Unsupported --youtube/);
   });
@@ -75,6 +82,13 @@ describe("cli flag parsing", () => {
     expect(() => parseMetricsMode("nope")).toThrow(/Unsupported --metrics/);
   });
 
+  it("parses --video-mode", () => {
+    expect(parseVideoMode("auto")).toBe("auto");
+    expect(parseVideoMode("transcript")).toBe("transcript");
+    expect(parseVideoMode("understand")).toBe("understand");
+    expect(() => parseVideoMode("nope")).toThrow(/Unsupported --video-mode/);
+  });
+
   it("parses --length as preset or character count", () => {
     expect(parseLengthArg("medium")).toEqual({ kind: "preset", preset: "medium" });
     expect(parseLengthArg("20k")).toEqual({ kind: "chars", maxCharacters: 20_000 });
@@ -103,5 +117,14 @@ describe("cli flag parsing", () => {
     expect(parseMaxExtractCharactersArg("15000")).toBe(15000);
     expect(() => parseMaxExtractCharactersArg("5")).toThrow(/max-extract-characters/);
     expect(() => parseMaxExtractCharactersArg("nope")).toThrow(/max-extract-characters/);
+  });
+
+  it("parses --retries", () => {
+    expect(parseRetriesArg("0")).toBe(0);
+    expect(parseRetriesArg("1")).toBe(1);
+    expect(parseRetriesArg("5")).toBe(5);
+    expect(() => parseRetriesArg("1.5")).toThrow(/Unsupported --retries/);
+    expect(() => parseRetriesArg("6")).toThrow(/Unsupported --retries/);
+    expect(() => parseRetriesArg("nope")).toThrow(/Unsupported --retries/);
   });
 });

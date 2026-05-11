@@ -105,6 +105,9 @@ If `[input]` is omitted, summarize prints concise help and exits.
 `--prompt <text>` / `--prompt-file <path>`
 : Override the summary prompt. Content is appended after the override.
 
+`--chat`
+: After summarizing or extracting, open an interactive chat grounded in the extracted source. Type `exit`, `quit`, or `:q` to leave. Not supported with `--json`.
+
 ### Models
 
 `--model <model>`

@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Writable } from "node:stream";
+import { Readable, Writable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import { toNitterUrls } from "../packages/core/src/content/link-preview/content/twitter-utils.js";
 import { runCli } from "../src/run.js";
@@ -143,6 +143,50 @@ describe("cli error handling", () => {
         stderr: noopStream(),
       }),
     ).rejects.toThrow("Use either --model or --cli");
+  });
+
+  it("errors when --chat is combined with --json", async () => {
+    await expect(
+      runCli(["--chat", "--json", "https://example.com"], {
+        env: { HOME: home },
+        fetch: vi.fn() as unknown as typeof fetch,
+        stdout: noopStream(),
+        stderr: noopStream(),
+      }),
+    ).rejects.toThrow("--chat is not supported with --json");
+  });
+
+  it("opens --chat after extraction and exits on command", async () => {
+    const html = `<!doctype html><html><head><title>Chat Source</title></head><body><article><p>${"C".repeat(
+      260,
+    )}</p></article></body></html>`;
+    const fetchMock = vi.fn(async () => new Response(html, { status: 200 }));
+
+    let stdoutText = "";
+    const stdout = new Writable({
+      write(chunk, _encoding, callback) {
+        stdoutText += chunk.toString();
+        callback();
+      },
+    });
+    let stderrText = "";
+    const stderr = new Writable({
+      write(chunk, _encoding, callback) {
+        stderrText += chunk.toString();
+        callback();
+      },
+    });
+
+    await runCli(["--extract", "--chat", "https://example.com"], {
+      env: { HOME: home },
+      fetch: fetchMock as unknown as typeof fetch,
+      stdin: Readable.from(["exit\n"]),
+      stdout,
+      stderr,
+    });
+
+    expect(stdoutText).toContain("C".repeat(50));
+    expect(stderrText).toContain("Chat mode");
   });
 
   it("prints extracted content when summarizing without any model API keys (default auto)", async () => {
